@@ -1,10 +1,12 @@
 import { generateText } from 'ai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { fromPath } from 'pdf2pic'
+import { execFile } from 'child_process'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import { promisify } from 'util'
 
 export type OcrServiceOptions = {
   apiKey?: string
@@ -24,8 +26,18 @@ export type OcrResult = {
 }
 
 const DEFAULT_MODEL = 'gpt-4o'
+const PDF_OCR_DEPENDENCY_GUIDANCE =
+  'PDF OCR requires GraphicsMagick (`gm`) or ImageMagick (`convert`) on PATH. Install dependencies (macOS: brew install graphicsmagick ghostscript poppler; Ubuntu/Debian: sudo apt-get install graphicsmagick ghostscript poppler-utils) or disable default OCR via OPENMERCATO_DEFAULT_ATTACHMENT_OCR_ENABLED=false.'
+const GM_MISSING_BINARY_ERROR_FRAGMENT = "gm/convert binaries can't be found"
+
+const execFileAsync = promisify(execFile)
 
 const DEFAULT_OCR_PROMPT = `Extract all text content from this image. Preserve the structure and formatting where possible. Output the text in markdown format. If there are tables, preserve them as markdown tables. If there is no text visible, respond with an empty string.`
+
+type PdfBackend = 'graphicsmagick' | 'imagemagick'
+
+let resolvedPdfBackendPromise: Promise<PdfBackend | null> | null = null
+let missingPdfBackendWarningEmitted = false
 
 function isImageMimeType(mimeType: string | null, filePath?: string): boolean {
   const normalized = (mimeType || '').toLowerCase()
@@ -62,6 +74,46 @@ function getImageMediaType(mimeType: string | null, filePath: string): string {
     '.tiff': 'image/tiff',
   }
   return mimeMap[ext] || 'image/png'
+}
+
+async function commandOutputContainsToken(command: string, args: string[], token: string): Promise<boolean> {
+  try {
+    const { stdout, stderr } = await execFileAsync(command, args, { timeout: 4000 })
+    const output = `${stdout ?? ''}\n${stderr ?? ''}`.toLowerCase()
+    return output.includes(token.toLowerCase())
+  } catch {
+    return false
+  }
+}
+
+async function resolvePdfBackend(): Promise<PdfBackend | null> {
+  if (!resolvedPdfBackendPromise) {
+    resolvedPdfBackendPromise = (async () => {
+      const graphicsMagickAvailable = await commandOutputContainsToken('gm', ['version'], 'graphicsmagick')
+      if (graphicsMagickAvailable) return 'graphicsmagick'
+
+      const imageMagickAvailable = await commandOutputContainsToken('convert', ['-version'], 'imagemagick')
+      if (imageMagickAvailable) return 'imagemagick'
+
+      return null
+    })()
+  }
+
+  return resolvedPdfBackendPromise
+}
+
+function isMissingPdfBackendError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  return (
+    error.message.includes('Could not execute GraphicsMagick/ImageMagick') ||
+    error.message.includes(GM_MISSING_BINARY_ERROR_FRAGMENT)
+  )
+}
+
+function warnMissingPdfBackendOnce(): void {
+  if (missingPdfBackendWarningEmitted) return
+  missingPdfBackendWarningEmitted = true
+  console.warn(`[attachments.ocr] ${PDF_OCR_DEPENDENCY_GUIDANCE}`)
 }
 
 export class OcrService {
@@ -174,7 +226,7 @@ export class OcrService {
     }
   }
 
-  async processPdf(input: OcrInput): Promise<OcrResult> {
+  async processPdf(input: OcrInput, backend: PdfBackend): Promise<OcrResult> {
     const startTime = Date.now()
     const { filePath, model } = input
     const resolvedModel = model ?? this.defaultModel
@@ -191,6 +243,9 @@ export class OcrService {
         savePath: tempDir,
         saveFilename: 'page',
       })
+      if (backend === 'imagemagick') {
+        converter.setGMClass(true)
+      }
 
       const pdfInfo = await converter.bulk(-1, { responseType: 'image' })
       const pageCount = pdfInfo.length
@@ -252,7 +307,21 @@ export class OcrService {
 
     if (isPdfMimeType(mimeType, filePath)) {
       console.log(`[attachments.ocr] Processing PDF: ${filePath}`)
-      return this.processPdf(input)
+      const backend = await resolvePdfBackend()
+      if (!backend) {
+        warnMissingPdfBackendOnce()
+        return null
+      }
+
+      try {
+        return await this.processPdf(input, backend)
+      } catch (error) {
+        if (isMissingPdfBackendError(error)) {
+          warnMissingPdfBackendOnce()
+          return null
+        }
+        throw error
+      }
     }
 
     if (isImageMimeType(mimeType, filePath)) {
