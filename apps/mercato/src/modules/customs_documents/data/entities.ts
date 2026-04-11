@@ -1,8 +1,10 @@
-import { Entity, PrimaryKey, Property, Index } from '@mikro-orm/core'
+import { Entity, PrimaryKey, Property, Index, OptionalProps } from '@mikro-orm/core'
 
 @Entity({ tableName: 'customs_declarations' })
 @Index({ name: 'customs_declarations_tenant_org_idx', properties: ['tenantId', 'organizationId'] })
 export class CustomsDeclaration {
+  [OptionalProps]?: 'status' | 'currency' | 'createdAt' | 'updatedAt' | 'deletedAt'
+
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string
 
@@ -67,6 +69,8 @@ export class CustomsDeclaration {
 @Entity({ tableName: 'customs_uploaded_documents' })
 @Index({ name: 'customs_docs_declaration_idx', properties: ['declarationId'] })
 export class CustomsUploadedDocument {
+  [OptionalProps]?: 'createdAt'
+
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string
 
@@ -95,6 +99,8 @@ export class CustomsUploadedDocument {
 @Entity({ tableName: 'customs_line_items' })
 @Index({ name: 'customs_line_items_declaration_idx', properties: ['declarationId'] })
 export class CustomsLineItem {
+  [OptionalProps]?: 'quantity' | 'createdAt'
+
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string
 
@@ -141,6 +147,8 @@ export class CustomsLineItem {
 @Entity({ tableName: 'customs_discrepancies' })
 @Index({ name: 'customs_discrepancies_declaration_idx', properties: ['declarationId'] })
 export class CustomsDiscrepancy {
+  [OptionalProps]?: 'severity' | 'isResolved' | 'createdAt'
+
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string
 
