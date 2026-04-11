@@ -267,19 +267,33 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
   }
 
   async function handleSelectHsCode(lineItemId: string, proposal: HsProposal) {
+    const proposals = (hsResults[lineItemId] ?? []).map(p => ({
+      code: p.code,
+      description: p.description,
+      dutyAmount: p.dutyAmount,
+    }))
     try {
       await apiCallOrThrow(`/api/customs_documents/line-items/${lineItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hsCodeSelected: proposal.code }),
+        body: JSON.stringify({ hsCodeSelected: proposal.code, hsProposals: proposals }),
       })
       setLineItems(prev => prev.map(li =>
-        li.id === lineItemId ? { ...li, hsCodeSelected: proposal.code } : li,
+        li.id === lineItemId ? { ...li, hsCodeSelected: proposal.code, hsProposals: proposals } : li,
       ))
       flash(`HS code ${proposal.code} saved`, 'success')
     } catch {
       flash('Failed to save HS code', 'error')
     }
+  }
+
+  function getDutyRate(item: LineItem): string | null {
+    const code = item.hsCodeSelected
+    if (!code) return null
+    const fromSearch = (hsResults[item.id] ?? []).find(p => p.code === code)?.dutyAmount
+    if (fromSearch && fromSearch !== '—') return fromSearch
+    const fromPersisted = (item.hsProposals ?? []).find(p => p.code === code)?.dutyAmount
+    return (fromPersisted && fromPersisted !== '—') ? fromPersisted : null
   }
 
   if (loading) {
@@ -548,9 +562,14 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                             <td style={{ padding: '10px', textAlign: 'right' }}>{item.grossWeightKg != null ? `${item.grossWeightKg.toLocaleString()} kg` : '—'}</td>
                             <td style={{ padding: '10px' }}>
                               {item.hsCodeSelected ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontFamily: 'monospace' }}>
-                                  <Check style={{ width: '13px', height: '13px' }} />{item.hsCodeSelected}
-                                </span>
+                                <div>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontFamily: 'monospace' }}>
+                                    <Check style={{ width: '13px', height: '13px' }} />{item.hsCodeSelected}
+                                  </span>
+                                  {getDutyRate(item) && (
+                                    <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{getDutyRate(item)}</div>
+                                  )}
+                                </div>
                               ) : (
                                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>
                               )}
@@ -629,6 +648,11 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                               <Check style={{ width: '14px', height: '14px', color: '#16a34a', flexShrink: 0 }} />
                               <span style={{ color: '#16a34a', fontWeight: 600 }}>Selected:</span>
                               <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#15803d' }}>{item.hsCodeSelected}</span>
+                              {getDutyRate(item) && (
+                                <span style={{ borderLeft: '1px solid #86efac', paddingLeft: '8px', color: '#15803d', fontWeight: 600 }}>
+                                  {getDutyRate(item)}
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>

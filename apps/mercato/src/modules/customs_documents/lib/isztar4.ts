@@ -51,7 +51,8 @@ async function fetchMeasures(code: string, language: string): Promise<{
     const url = `${ISZTAR4_BASE}/goods-nomenclature/measures?nomenclatureCode=${paddedCode}&language=${language}`
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
     if (!res.ok) {
-      console.warn(`[isztar4] fetchMeasures ${paddedCode} → HTTP ${res.status}`)
+      const errorBody = await res.text().catch(() => '(unreadable)')
+      console.warn(`[isztar4] fetchMeasures ${paddedCode} → HTTP ${res.status}: ${errorBody}`)
       return null
     }
     const data = await res.json() as {
@@ -59,6 +60,8 @@ async function fetchMeasures(code: string, language: string): Promise<{
       tariffMeasures?: Array<{ country?: { description?: string }; description?: string; dutyAmount?: string }>
       nonTariffMeasures?: Array<{ description?: string }>
     }
+
+    console.log(`[isztar4] ${paddedCode} raw response:`, JSON.stringify(data).slice(0, 1000))
 
     const ergoOmnes = (data.tariffMeasures ?? []).find(
       m => m.country?.description === 'ERGA OMNES' || m.description?.includes('Third country duty'),
