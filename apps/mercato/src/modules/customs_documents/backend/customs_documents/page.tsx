@@ -2,6 +2,8 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
+import { Package, Plus } from 'lucide-react'
+import { Button } from '@open-mercato/ui/primitives/button'
 import { Page, PageBody } from '@open-mercato/ui/backend/Page'
 import { apiCallOrThrow } from '@open-mercato/ui/backend/utils/apiCall'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
@@ -90,23 +92,10 @@ export default function CustomsDeclarationsListPage() {
                 Process B/L, Commercial Invoice and Packing List documents
               </p>
             </div>
-            <button
-              onClick={createDeclaration}
-              disabled={creating}
-              style={{
-                background: '#2563eb',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 16px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: creating ? 'not-allowed' : 'pointer',
-                opacity: creating ? 0.7 : 1,
-              }}
-            >
-              {creating ? 'Creating…' : '+ New Declaration'}
-            </button>
+            <Button type="button" onClick={createDeclaration} disabled={creating}>
+              <Plus className="size-4" />
+              {creating ? 'Creating…' : 'New Declaration'}
+            </Button>
           </div>
 
           {loading ? (
@@ -118,7 +107,7 @@ export default function CustomsDeclarationsListPage() {
               border: '2px dashed #e5e7eb',
               borderRadius: '12px',
             }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📦</div>
+              <Package style={{ width: '40px', height: '40px', color: '#9ca3af', margin: '0 auto 12px' }} />
               <p style={{ color: '#374151', fontWeight: 600, margin: '0 0 4px' }}>No declarations yet</p>
               <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
                 Create a new declaration to start processing customs documents

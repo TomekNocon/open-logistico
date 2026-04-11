@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from 'react'
+import { Check, FileText, Loader2, Search, Sparkles } from 'lucide-react'
+import { Button } from '@open-mercato/ui/primitives/button'
 import { Page, PageBody } from '@open-mercato/ui/backend/Page'
 import { apiCallOrThrow } from '@open-mercato/ui/backend/utils/apiCall'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
@@ -343,7 +345,7 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
               background: smartUploading ? '#f0f9ff' : '#f8faff',
               cursor: smartUploading ? 'not-allowed' : 'pointer',
             }}>
-              <span style={{ fontSize: '32px' }}>🤖</span>
+              <Sparkles style={{ width: '32px', height: '32px', color: '#2563eb' }} />
               <span style={{ fontWeight: 600, fontSize: '14px', color: '#1d4ed8' }}>
                 {smartUploading ? 'Detecting document types…' : 'Smart Upload — drop up to 3 PDFs at once'}
               </span>
@@ -378,13 +380,15 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                     {uploaded ? (
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <span style={{ color: '#16a34a', fontSize: '18px' }}>✓</span>
+                          <Check style={{ width: '16px', height: '16px', color: '#16a34a', flexShrink: 0 }} />
                           <span style={{ fontSize: '13px', color: '#374151', wordBreak: 'break-all' }}>
                             {uploaded.fileName ?? 'File uploaded'}
                           </span>
                         </div>
                         {uploaded.parsedAt && (
-                          <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 500 }}>Parsed ✓</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#16a34a', fontWeight: 500 }}>
+                            <Check style={{ width: '12px', height: '12px' }} /> Parsed
+                          </div>
                         )}
                         <label style={{ display: 'block', marginTop: '8px', cursor: 'pointer' }}>
                           <span style={{ fontSize: '12px', color: '#6b7280', textDecoration: 'underline' }}>Replace file</span>
@@ -408,7 +412,7 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                         cursor: isUploading ? 'not-allowed' : 'pointer',
                         background: isUploading ? '#f9fafb' : '#fafafa',
                       }}>
-                        <span style={{ fontSize: '28px', marginBottom: '8px' }}>📄</span>
+                        <FileText style={{ width: '28px', height: '28px', color: '#9ca3af', marginBottom: '8px' }} />
                         <span style={{ fontSize: '13px', color: '#6b7280' }}>
                           {isUploading ? 'Uploading…' : 'Click to upload PDF'}
                         </span>
@@ -428,30 +432,19 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
 
             {hasDocuments && (
               <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleParse}
-                  disabled={parsing}
-                  style={{
-                    background: parsing ? '#9ca3af' : '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '10px 24px',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: parsing ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
+                <Button onClick={handleParse} disabled={parsing}>
                   {parsing ? (
                     <>
-                      <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
+                      <Loader2 className="size-4 animate-spin" />
                       Parsing with Claude AI…
                     </>
-                  ) : '🤖 Parse All Documents'}
-                </button>
+                  ) : (
+                    <>
+                      <Sparkles className="size-4" />
+                      Parse All Documents
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -503,7 +496,9 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                             <td style={{ padding: '10px', textAlign: 'right' }}>{item.grossWeightKg ? `${item.grossWeightKg.toLocaleString()} kg` : '—'}</td>
                             <td style={{ padding: '10px' }}>
                               {item.hsCodeSelected ? (
-                                <span style={{ color: '#16a34a', fontWeight: 600, fontFamily: 'monospace' }}>✓ {item.hsCodeSelected}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontFamily: 'monospace' }}>
+                                  <Check style={{ width: '13px', height: '13px' }} />{item.hsCodeSelected}
+                                </span>
                               ) : (
                                 <span style={{ color: '#9ca3af', fontSize: '12px' }}>—</span>
                               )}
@@ -545,7 +540,9 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                     </span>
                   )}
                   {errorCount === 0 && warnCount === 0 && (
-                    <span style={{ marginLeft: '12px', fontSize: '14px', color: '#16a34a', fontWeight: 400 }}>All consistent ✓</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: '12px', fontSize: '14px', color: '#16a34a', fontWeight: 400 }}>
+                      <Check style={{ width: '14px', height: '14px' }} /> All consistent
+                    </span>
                   )}
                 </SectionTitle>
 
@@ -577,29 +574,26 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                           </div>
                           {item.hsCodeSelected && (
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#dcfce7', borderRadius: '6px', padding: '6px 12px', marginBottom: '8px' }}>
-                              <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selected:</span>
+                              <Check style={{ width: '14px', height: '14px', color: '#16a34a', flexShrink: 0 }} />
+                              <span style={{ color: '#16a34a', fontWeight: 600 }}>Selected:</span>
                               <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#15803d' }}>{item.hsCodeSelected}</span>
                             </div>
                           )}
                         </div>
-                        <button
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleHsSearch(item.id, item.description)}
                           disabled={searchingHs === item.id}
-                          style={{
-                            background: '#f0f9ff',
-                            color: '#2563eb',
-                            border: '1px solid #bfdbfe',
-                            borderRadius: '6px',
-                            padding: '8px 14px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: searchingHs === item.id ? 'not-allowed' : 'pointer',
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                          }}
+                          style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                         >
-                          {searchingHs === item.id ? '🔍 Searching…' : '🔍 Search ISZTAR4'}
-                        </button>
+                          {searchingHs === item.id ? (
+                            <><Loader2 className="size-4 animate-spin" /> Searching…</>
+                          ) : (
+                            <><Search className="size-4" /> Search ISZTAR4</>
+                          )}
+                        </Button>
                       </div>
 
                       {/* HS Results */}
@@ -641,23 +635,17 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                                     </td>
                                     <td style={{ padding: '8px 10px' }}>
                                       {item.hsCodeSelected === proposal.code ? (
-                                        <span style={{ color: '#16a34a', fontWeight: 600 }}>✓ Selected</span>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600 }}>
+                                          <Check style={{ width: '14px', height: '14px' }} /> Selected
+                                        </span>
                                       ) : (
-                                        <button
+                                        <Button
+                                          type="button"
+                                          size="sm"
                                           onClick={() => handleSelectHsCode(item.id, proposal)}
-                                          style={{
-                                            background: '#2563eb',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '5px',
-                                            padding: '5px 12px',
-                                            fontSize: '12px',
-                                            fontWeight: 600,
-                                            cursor: 'pointer',
-                                          }}
                                         >
                                           Select
-                                        </button>
+                                        </Button>
                                       )}
                                     </td>
                                   </tr>
@@ -781,7 +769,9 @@ function ConsistencyTable({
                 </td>
                 <td style={{ padding: '10px 12px' }}>
                   {isOk ? (
-                    <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '13px' }}>✓ OK</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontSize: '13px' }}>
+                      <Check style={{ width: '13px', height: '13px' }} /> OK
+                    </span>
                   ) : disc.severity === 'error' ? (
                     <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '13px' }}>
                       ✗ Mismatch: {disc.valueA} ≠ {disc.valueB}
