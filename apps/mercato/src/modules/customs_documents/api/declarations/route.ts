@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   const where: Record<string, unknown> = {
     tenantId: auth.tenantId,
-    organizationId: auth.orgId,
+    ...(auth.orgId ? { organizationId: auth.orgId } : {}),
     deletedAt: null,
   }
   if (query.status) where.status = query.status

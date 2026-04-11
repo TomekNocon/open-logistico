@@ -67,7 +67,7 @@ const blSchema = z.object({
   vessel: z.string().describe('Vessel name and voyage number'),
   containers: z.array(z.string()).describe('List of container numbers'),
   grossWeightKg: z.number().describe('Total gross weight in kg'),
-  packageCount: z.number().int().describe('Total number of packages/units'),
+  packageCount: z.number().describe('Total number of packages/units'),
   goodsDescription: z.string().describe('General description of goods'),
   shippedOnBoardDate: z.string().describe('Shipped on board date'),
 })
@@ -77,7 +77,7 @@ const invoiceLineItemSchema = z.object({
   containerNumber: z.string().describe('Container number this item is in'),
   vin: z.string().optional().describe('Vehicle Identification Number if applicable'),
   engineNumber: z.string().optional().describe('Engine number if applicable'),
-  quantity: z.number().int().describe('Quantity of items'),
+  quantity: z.number().describe('Quantity of items'),
   unitPriceUsd: z.number().describe('Unit price in USD'),
   totalValueUsd: z.number().describe('Total value in USD'),
 })
@@ -98,7 +98,7 @@ const packingListLineItemSchema = z.object({
   description: z.string().describe('Product description'),
   containerNumber: z.string().describe('Container number'),
   vin: z.string().optional().describe('VIN if applicable'),
-  quantity: z.number().int().describe('Quantity'),
+  quantity: z.number().describe('Quantity'),
   grossWeightKg: z.number().describe('Gross weight in kg'),
   netWeightKg: z.number().optional().describe('Net weight in kg'),
   cbm: z.number().optional().describe('Volume in cubic meters'),
@@ -109,7 +109,7 @@ const packingListSchema = z.object({
   buyer: z.string().describe('Buyer name and address'),
   invoiceReference: z.string().describe('Related invoice number'),
   lineItems: z.array(packingListLineItemSchema).describe('List of packed items'),
-  totalQuantity: z.number().int().describe('Total number of items'),
+  totalQuantity: z.number().describe('Total number of items'),
   totalGrossWeightKg: z.number().describe('Total gross weight in kg'),
   totalCbm: z.number().optional().describe('Total volume in CBM'),
 })
@@ -125,7 +125,7 @@ export async function parseBillOfLading(pdfBytes: Buffer): Promise<BLData> {
           {
             type: 'file',
             data: pdfBytes.toString('base64'),
-            mimeType: 'application/pdf',
+            mediaType: 'application/pdf',
           },
           {
             type: 'text',
@@ -149,7 +149,7 @@ export async function parseCommercialInvoice(pdfBytes: Buffer): Promise<InvoiceD
           {
             type: 'file',
             data: pdfBytes.toString('base64'),
-            mimeType: 'application/pdf',
+            mediaType: 'application/pdf',
           },
           {
             type: 'text',
@@ -173,7 +173,7 @@ export async function parsePackingList(pdfBytes: Buffer): Promise<PackingListDat
           {
             type: 'file',
             data: pdfBytes.toString('base64'),
-            mimeType: 'application/pdf',
+            mediaType: 'application/pdf',
           },
           {
             type: 'text',

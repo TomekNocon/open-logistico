@@ -24,10 +24,10 @@ const hsCodeSuggestionsSchema = z.object({
     code: z.string().describe('10-digit HS/CN code, padded with zeros if needed'),
     confidence: z.enum(['high', 'medium', 'low']).describe('Confidence level of this suggestion'),
     rationale: z.string().describe('Brief reason why this code fits'),
-  })).min(1).max(6).describe('Suggested HS codes ordered by likelihood'),
+  })).describe('Suggested HS codes ordered by likelihood, between 1 and 6 items'),
 })
 
-async function suggestHsCodes(description: string): Promise<Array<{ code: string; confidence: 'high' | 'medium' | 'low' }>> {
+async function suggestHsCodes(description: string): Promise<Array<{ code: string; confidence: 'high' | 'medium' | 'low'; rationale: string }>> {
   const { object } = await generateObject({
     model: getParserModel(),
     schema: hsCodeSuggestionsSchema,
@@ -50,7 +50,10 @@ async function fetchMeasures(code: string, language: string): Promise<{
     const paddedCode = code.replace(/\D/g, '').padEnd(10, '0').slice(0, 10)
     const url = `${ISZTAR4_BASE}/goods-nomenclature/measures?nomenclatureCode=${paddedCode}&language=${language}`
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.warn(`[isztar4] fetchMeasures ${paddedCode} → HTTP ${res.status}`)
+      return null
+    }
     const data = await res.json() as {
       nomenclature?: { description?: string }
       tariffMeasures?: Array<{ country?: { description?: string }; description?: string; dutyAmount?: string }>
@@ -71,7 +74,8 @@ async function fetchMeasures(code: string, language: string): Promise<{
       })),
       nonTariffMeasures: (data.nonTariffMeasures ?? []).slice(0, 3).map(m => m.description ?? ''),
     }
-  } catch {
+  } catch (err) {
+    console.warn(`[isztar4] fetchMeasures ${code} failed:`, err)
     return null
   }
 }
@@ -81,16 +85,16 @@ export async function searchHsCodes(description: string, language: 'PL' | 'EN' =
   const proposals: HsProposal[] = []
 
   await Promise.allSettled(
-    suggestions.map(async ({ code, confidence }) => {
-      const measures = await fetchMeasures(code, language)
-      if (!measures) return
+    suggestions.map(async ({ code, confidence, rationale }) => {
+      const paddedCode = code.replace(/\D/g, '').padEnd(10, '0').slice(0, 10)
+      const measures = await fetchMeasures(paddedCode, language)
 
       proposals.push({
-        code: code.replace(/\D/g, '').padEnd(10, '0').slice(0, 10),
-        description: measures.description || `HS Code ${code}`,
-        dutyAmount: measures.dutyAmount,
-        tariffMeasures: measures.tariffMeasures,
-        nonTariffMeasures: measures.nonTariffMeasures,
+        code: paddedCode,
+        description: measures?.description || rationale || `HS Code ${paddedCode}`,
+        dutyAmount: measures?.dutyAmount ?? '—',
+        tariffMeasures: measures?.tariffMeasures ?? [],
+        nonTariffMeasures: measures?.nonTariffMeasures ?? [],
         confidence,
       })
     }),

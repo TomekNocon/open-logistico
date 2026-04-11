@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const declaration = await em.findOne(CustomsDeclaration, {
     id,
     tenantId: auth.tenantId,
-    organizationId: auth.orgId,
+    ...(auth.orgId ? { organizationId: auth.orgId } : {}),
     deletedAt: null,
   })
   if (!declaration) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -58,7 +58,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   const declaration = await em.findOne(CustomsDeclaration, {
     id,
     tenantId: auth.tenantId,
-    organizationId: auth.orgId,
+    ...(auth.orgId ? { organizationId: auth.orgId } : {}),
     deletedAt: null,
   })
   if (!declaration) return NextResponse.json({ error: 'Not found' }, { status: 404 })

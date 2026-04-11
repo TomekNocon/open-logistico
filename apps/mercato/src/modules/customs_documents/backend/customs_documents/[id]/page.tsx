@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from 'react'
-import { useParams } from 'next/navigation'
 import { Page, PageBody } from '@open-mercato/ui/backend/Page'
 import { apiCallOrThrow } from '@open-mercato/ui/backend/utils/apiCall'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
@@ -136,9 +135,8 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function CustomsDeclarationDetailPage() {
-  const params = useParams()
-  const declarationId = params.id as string
+export default function CustomsDeclarationDetailPage({ params }: { params?: { id?: string } }) {
+  const declarationId = params?.id
 
   const [declaration, setDeclaration] = React.useState<Declaration | null>(null)
   const [documents, setDocuments] = React.useState<UploadedDocument[]>([])
@@ -151,7 +149,7 @@ export default function CustomsDeclarationDetailPage() {
   const [hsResults, setHsResults] = React.useState<Record<string, HsProposal[]>>({})
 
   React.useEffect(() => {
-    loadDeclaration()
+    if (declarationId) loadDeclaration()
   }, [declarationId])
 
   async function loadDeclaration() {
