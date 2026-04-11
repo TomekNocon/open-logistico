@@ -31,6 +31,13 @@ export const updateLineItemSchema = z.object({
   })).optional().nullable(),
 })
 
+export const detectDocumentsSchema = z.object({
+  files: z.array(z.object({
+    attachmentId: z.string().uuid(),
+    fileName: z.string().max(500).optional(),
+  })).min(1).max(3),
+})
+
 export const listDeclarationsSchema = z.object({
   page: z.coerce.number().min(1).default(1),
   pageSize: z.coerce.number().min(1).max(100).default(50),

@@ -145,6 +145,7 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
   const [loading, setLoading] = React.useState(true)
   const [parsing, setParsing] = React.useState(false)
   const [uploadingType, setUploadingType] = React.useState<DocumentType | null>(null)
+  const [smartUploading, setSmartUploading] = React.useState(false)
   const [searchingHs, setSearchingHs] = React.useState<string | null>(null)
   const [hsResults, setHsResults] = React.useState<Record<string, HsProposal[]>>({})
 
@@ -168,6 +169,41 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
       flash('Failed to load declaration', 'error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleSmartUpload(files: FileList) {
+    if (files.length === 0) return
+    setSmartUploading(true)
+    try {
+      const uploaded = await Promise.all(
+        Array.from(files).map(async file => {
+          const attachmentId = await uploadToAttachments(file)
+          if (!attachmentId) throw new Error(`Failed to upload ${file.name}`)
+          return { attachmentId, fileName: file.name }
+        }),
+      )
+
+      const res = await apiCallOrThrow<{ data: { detected: Array<{ fileName: string | null; documentType: string; confidence: string }> } }>(
+        `/api/customs_documents/declarations/${declarationId}/detect`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: uploaded }),
+        },
+      )
+
+      const detected = res.result?.data?.detected ?? []
+      const summary = detected
+        .filter(d => d.documentType)
+        .map(d => `${d.fileName ?? 'file'} → ${DOC_LABELS[d.documentType as DocumentType] ?? d.documentType}`)
+        .join(', ')
+      flash(summary ? `Detected: ${summary}` : 'Documents uploaded', 'success')
+      await loadDeclaration()
+    } catch {
+      flash('Smart upload failed', 'error')
+    } finally {
+      setSmartUploading(false)
     }
   }
 
@@ -292,6 +328,44 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
           {/* ─── SECTION 1: Upload ─── */}
           <div style={{ marginBottom: '40px' }}>
             <SectionTitle>1. Upload Documents</SectionTitle>
+
+            {/* Smart multi-file upload */}
+            <label style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '28px 16px',
+              marginBottom: '20px',
+              border: '2px dashed #93c5fd',
+              borderRadius: '10px',
+              background: smartUploading ? '#f0f9ff' : '#f8faff',
+              cursor: smartUploading ? 'not-allowed' : 'pointer',
+            }}>
+              <span style={{ fontSize: '32px' }}>🤖</span>
+              <span style={{ fontWeight: 600, fontSize: '14px', color: '#1d4ed8' }}>
+                {smartUploading ? 'Detecting document types…' : 'Smart Upload — drop up to 3 PDFs at once'}
+              </span>
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                AI will automatically detect which file is the B/L, Invoice and Packing List
+              </span>
+              <input
+                type="file"
+                accept=".pdf"
+                multiple
+                style={{ display: 'none' }}
+                disabled={smartUploading}
+                onChange={e => e.target.files && handleSmartUpload(e.target.files)}
+              />
+            </label>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+              <span style={{ fontSize: '12px', color: '#9ca3af', flexShrink: 0 }}>or upload individually</span>
+              <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {(['bl', 'invoice', 'packing_list'] as DocumentType[]).map(docType => {
                 const uploaded = documents.find(d => d.documentType === docType)
