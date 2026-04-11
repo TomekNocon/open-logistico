@@ -8,6 +8,7 @@ import {
   CustomsDiscrepancy,
 } from '../../../data/entities'
 import { updateDeclarationSchema } from '../../../data/validators'
+import { normalizeDeclarationNumerics, normalizeLineItemNumerics } from '../../../lib/numbers'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 
@@ -40,7 +41,12 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   return NextResponse.json({
     ok: true,
-    data: { declaration, documents, lineItems, discrepancies },
+    data: {
+      declaration: normalizeDeclarationNumerics(declaration),
+      documents,
+      lineItems: lineItems.map((lineItem) => normalizeLineItemNumerics(lineItem)),
+      discrepancies,
+    },
   })
 }
 
@@ -67,7 +73,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (payload.notes !== undefined) declaration.notes = payload.notes
 
   await em.flush()
-  return NextResponse.json({ ok: true, data: declaration })
+  return NextResponse.json({ ok: true, data: normalizeDeclarationNumerics(declaration) })
 }
 
 export const openApi: OpenApiRouteDoc = {

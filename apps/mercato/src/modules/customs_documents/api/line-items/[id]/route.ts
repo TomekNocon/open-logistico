@@ -3,6 +3,7 @@ import { createRequestContainer } from '@open-mercato/shared/lib/di/container'
 import { getAuthFromRequest } from '@open-mercato/shared/lib/auth/server'
 import { CustomsLineItem, CustomsDeclaration } from '../../../data/entities'
 import { updateLineItemSchema } from '../../../data/validators'
+import { normalizeLineItemNumerics } from '../../../lib/numbers'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 
@@ -46,7 +47,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     await em.flush()
   }
 
-  return NextResponse.json({ ok: true, data: lineItem })
+  return NextResponse.json({ ok: true, data: normalizeLineItemNumerics(lineItem) })
 }
 
 export const openApi: OpenApiRouteDoc = {

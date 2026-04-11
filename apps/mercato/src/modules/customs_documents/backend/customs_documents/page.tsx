@@ -8,6 +8,7 @@ import { Page, PageBody } from '@open-mercato/ui/backend/Page'
 import { apiCallOrThrow } from '@open-mercato/ui/backend/utils/apiCall'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
 import { useOrganizationScopeDetail } from '@open-mercato/shared/lib/frontend/useOrganizationScope'
+import { normalizeDeclarationNumerics } from '../../lib/numbers'
 
 type Declaration = {
   id: string
@@ -56,7 +57,7 @@ export default function CustomsDeclarationsListPage() {
     setLoading(true)
     try {
       const res = await apiCallOrThrow<{ data: Declaration[] }>('/api/customs_documents/declarations')
-      setDeclarations(res.result?.data ?? [])
+      setDeclarations((res.result?.data ?? []).map((declaration) => normalizeDeclarationNumerics(declaration)))
     } catch {
       flash('Failed to load declarations', 'error')
     } finally {
@@ -151,10 +152,10 @@ export default function CustomsDeclarationsListPage() {
                       {d.portOfLoading && d.portOfDischarge ? `${d.portOfLoading} → ${d.portOfDischarge}` : '—'}
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px' }}>
-                      {d.totalValueUsd ? `${d.currency} ${d.totalValueUsd.toLocaleString()}` : '—'}
+                      {d.totalValueUsd != null ? `${d.currency} ${d.totalValueUsd.toLocaleString()}` : '—'}
                     </td>
                     <td style={{ padding: '12px', fontSize: '14px' }}>
-                      {d.grossWeightBl ? `${d.grossWeightBl.toLocaleString()} kg` : '—'}
+                      {d.grossWeightBl != null ? `${d.grossWeightBl.toLocaleString()} kg` : '—'}
                     </td>
                     <td style={{ padding: '12px', fontSize: '13px', color: '#9ca3af' }}>
                       {new Date(d.createdAt).toLocaleDateString()}

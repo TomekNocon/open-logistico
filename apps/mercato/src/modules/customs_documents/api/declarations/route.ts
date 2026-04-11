@@ -3,6 +3,7 @@ import { createRequestContainer } from '@open-mercato/shared/lib/di/container'
 import { getAuthFromRequest } from '@open-mercato/shared/lib/auth/server'
 import { CustomsDeclaration } from '../../data/entities'
 import { createDeclarationSchema, listDeclarationsSchema } from '../../data/validators'
+import { normalizeDeclarationNumerics } from '../../lib/numbers'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    data: items,
+    data: items.map((item) => normalizeDeclarationNumerics(item)),
     meta: { page: query.page, pageSize: query.pageSize, total },
   })
 }
@@ -61,10 +62,13 @@ export async function POST(req: NextRequest) {
     organizationId: payload.organizationId,
     notes: payload.notes,
     status: 'draft',
+    currency: 'USD',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   })
   await em.persistAndFlush(declaration)
 
-  return NextResponse.json({ ok: true, data: declaration }, { status: 201 })
+  return NextResponse.json({ ok: true, data: normalizeDeclarationNumerics(declaration) }, { status: 201 })
 }
 
 export const openApi: OpenApiRouteDoc = {

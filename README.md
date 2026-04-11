@@ -1,3 +1,7 @@
+  - superadmin@acme.com / secret
+  - admin@acme.com / secret
+  - employee@acme.com / secret
+
 <p align="center">
   <img src="./apps/mercato/public/open-mercato.svg" alt="Open Mercato logo" width="120" />
 </p>

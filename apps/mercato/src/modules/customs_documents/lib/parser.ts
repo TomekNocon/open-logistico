@@ -1,6 +1,7 @@
 import { generateObject } from 'ai'
 import { z } from 'zod'
 import { getParserModel } from './aiProvider'
+import { toFiniteNumber } from './numbers'
 
 export interface BLData {
   blNumber: string
@@ -58,6 +59,11 @@ export interface PackingListData {
   totalCbm?: number
 }
 
+const aiNumberSchema = z.preprocess((value) => {
+  const parsed = toFiniteNumber(value, Number.NaN)
+  return Number.isFinite(parsed) ? parsed : value
+}, z.number())
+
 const blSchema = z.object({
   blNumber: z.string().describe('Bill of Lading number'),
   shipper: z.string().describe('Shipper/exporter name and location'),
@@ -66,8 +72,8 @@ const blSchema = z.object({
   portOfDischarge: z.string().describe('Port of discharge'),
   vessel: z.string().describe('Vessel name and voyage number'),
   containers: z.array(z.string()).describe('List of container numbers'),
-  grossWeightKg: z.number().describe('Total gross weight in kg'),
-  packageCount: z.number().describe('Total number of packages/units'),
+  grossWeightKg: aiNumberSchema.describe('Total gross weight in kg'),
+  packageCount: aiNumberSchema.describe('Total number of packages/units'),
   goodsDescription: z.string().describe('General description of goods'),
   shippedOnBoardDate: z.string().describe('Shipped on board date'),
 })
@@ -77,9 +83,9 @@ const invoiceLineItemSchema = z.object({
   containerNumber: z.string().describe('Container number this item is in'),
   vin: z.string().optional().describe('Vehicle Identification Number if applicable'),
   engineNumber: z.string().optional().describe('Engine number if applicable'),
-  quantity: z.number().describe('Quantity of items'),
-  unitPriceUsd: z.number().describe('Unit price in USD'),
-  totalValueUsd: z.number().describe('Total value in USD'),
+  quantity: aiNumberSchema.describe('Quantity of items'),
+  unitPriceUsd: aiNumberSchema.describe('Unit price in USD'),
+  totalValueUsd: aiNumberSchema.describe('Total value in USD'),
 })
 
 const invoiceSchema = z.object({
@@ -90,18 +96,18 @@ const invoiceSchema = z.object({
   tradeTerms: z.string().describe('Trade terms e.g. FOB, CIF, DAP'),
   currency: z.string().describe('Currency code e.g. USD'),
   lineItems: z.array(invoiceLineItemSchema).describe('List of goods line items'),
-  totalValueUsd: z.number().describe('Total invoice value in USD'),
-  grossWeightKg: z.number().optional().describe('Gross weight in kg if stated'),
+  totalValueUsd: aiNumberSchema.describe('Total invoice value in USD'),
+  grossWeightKg: aiNumberSchema.optional().describe('Gross weight in kg if stated'),
 })
 
 const packingListLineItemSchema = z.object({
   description: z.string().describe('Product description'),
   containerNumber: z.string().describe('Container number'),
   vin: z.string().optional().describe('VIN if applicable'),
-  quantity: z.number().describe('Quantity'),
-  grossWeightKg: z.number().describe('Gross weight in kg'),
-  netWeightKg: z.number().optional().describe('Net weight in kg'),
-  cbm: z.number().optional().describe('Volume in cubic meters'),
+  quantity: aiNumberSchema.describe('Quantity'),
+  grossWeightKg: aiNumberSchema.describe('Gross weight in kg'),
+  netWeightKg: aiNumberSchema.optional().describe('Net weight in kg'),
+  cbm: aiNumberSchema.optional().describe('Volume in cubic meters'),
 })
 
 const packingListSchema = z.object({
@@ -109,9 +115,9 @@ const packingListSchema = z.object({
   buyer: z.string().describe('Buyer name and address'),
   invoiceReference: z.string().describe('Related invoice number'),
   lineItems: z.array(packingListLineItemSchema).describe('List of packed items'),
-  totalQuantity: z.number().describe('Total number of items'),
-  totalGrossWeightKg: z.number().describe('Total gross weight in kg'),
-  totalCbm: z.number().optional().describe('Total volume in CBM'),
+  totalQuantity: aiNumberSchema.describe('Total number of items'),
+  totalGrossWeightKg: aiNumberSchema.describe('Total gross weight in kg'),
+  totalCbm: aiNumberSchema.optional().describe('Total volume in CBM'),
 })
 
 export async function parseBillOfLading(pdfBytes: Buffer): Promise<BLData> {

@@ -6,6 +6,7 @@ import { Button } from '@open-mercato/ui/primitives/button'
 import { Page, PageBody } from '@open-mercato/ui/backend/Page'
 import { apiCallOrThrow } from '@open-mercato/ui/backend/utils/apiCall'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
+import { normalizeDeclarationNumerics, normalizeLineItemNumerics, sumBy } from '../../../lib/numbers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -101,6 +102,10 @@ async function uploadToAttachments(file: File): Promise<string | null> {
   }
 }
 
+function buildDeclarationExportUrl(declarationId: string, format: 'json' | 'csv'): string {
+  return `/api/customs_documents/declarations/${encodeURIComponent(declarationId)}/export?target=winsad&format=${format}`
+}
+
 // ─── Section components ───────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -162,9 +167,9 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
         `/api/customs_documents/declarations/${declarationId}`,
       )
       if (res.result?.data) {
-        setDeclaration(res.result.data.declaration)
+        setDeclaration(normalizeDeclarationNumerics(res.result.data.declaration))
         setDocuments(res.result.data.documents)
-        setLineItems(res.result.data.lineItems)
+        setLineItems(res.result.data.lineItems.map((lineItem) => normalizeLineItemNumerics(lineItem)))
         setDiscrepancies(res.result.data.discrepancies)
       }
     } catch {
@@ -301,6 +306,9 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
   const hasDocuments = documents.length > 0
   const errorCount = discrepancies.filter(d => d.severity === 'error').length
   const warnCount = discrepancies.filter(d => d.severity === 'warning').length
+  const totalLineQuantity = sumBy(lineItems, (lineItem) => lineItem.quantity)
+  const totalLineValueUsd = sumBy(lineItems, (lineItem) => lineItem.totalValueUsd)
+  const totalLineGrossWeightKg = sumBy(lineItems, (lineItem) => lineItem.grossWeightKg)
 
   return (
     <Page>
@@ -321,10 +329,54 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                 <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: '14px' }}>
                   Invoice: {declaration.invoiceNumber}
                   {declaration.portOfLoading && ` · ${declaration.portOfLoading} → ${declaration.portOfDischarge}`}
-                  {declaration.totalValueUsd && ` · ${declaration.currency} ${declaration.totalValueUsd.toLocaleString()}`}
+                  {declaration.totalValueUsd != null && ` · ${declaration.currency} ${declaration.totalValueUsd.toLocaleString()}`}
                 </p>
               )}
             </div>
+            {isParsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
+                <a
+                  href={buildDeclarationExportUrl(declaration.id, 'json')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    border: '1px solid #2563eb',
+                    background: '#2563eb',
+                    color: '#fff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    padding: '8px 12px',
+                  }}
+                >
+                  Export WinSAD JSON
+                </a>
+                <a
+                  href={buildDeclarationExportUrl(declaration.id, 'csv')}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '8px',
+                    border: '1px solid #93c5fd',
+                    background: '#f8fbff',
+                    color: '#1d4ed8',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    padding: '8px 12px',
+                  }}
+                >
+                  Export WinSAD CSV
+                </a>
+              </div>
+            )}
           </div>
 
           {/* ─── SECTION 1: Upload ─── */}
@@ -463,8 +515,8 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                     ['Port of Discharge', declaration.portOfDischarge],
                     ['B/L Number', declaration.blNumber],
                     ['Invoice Number', declaration.invoiceNumber],
-                    ['Total Value', declaration.totalValueUsd ? `${declaration.currency} ${declaration.totalValueUsd.toLocaleString()}` : null],
-                    ['Total Gross Weight', declaration.grossWeightBl ? `${declaration.grossWeightBl.toLocaleString()} kg` : null],
+                    ['Total Value', declaration.totalValueUsd != null ? `${declaration.currency} ${declaration.totalValueUsd.toLocaleString()}` : null],
+                    ['Total Gross Weight', declaration.grossWeightBl != null ? `${declaration.grossWeightBl.toLocaleString()} kg` : null],
                   ].map(([label, value]) => (
                     <div key={label as string} style={{ display: 'flex', gap: '8px', padding: '8px 12px', background: '#f9fafb', borderRadius: '6px' }}>
                       <span style={{ fontSize: '13px', color: '#6b7280', minWidth: '160px' }}>{label}</span>
@@ -491,9 +543,9 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                             <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px' }}>{item.containerNumber ?? '—'}</td>
                             <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: '12px' }}>{item.vin ?? '—'}</td>
                             <td style={{ padding: '10px', textAlign: 'center' }}>{item.quantity}</td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>{item.unitPriceUsd ? `$${item.unitPriceUsd.toLocaleString()}` : '—'}</td>
-                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: 600 }}>{item.totalValueUsd ? `$${item.totalValueUsd.toLocaleString()}` : '—'}</td>
-                            <td style={{ padding: '10px', textAlign: 'right' }}>{item.grossWeightKg ? `${item.grossWeightKg.toLocaleString()} kg` : '—'}</td>
+                            <td style={{ padding: '10px', textAlign: 'right' }}>{item.unitPriceUsd != null ? `$${item.unitPriceUsd.toLocaleString()}` : '—'}</td>
+                            <td style={{ padding: '10px', textAlign: 'right', fontWeight: 600 }}>{item.totalValueUsd != null ? `$${item.totalValueUsd.toLocaleString()}` : '—'}</td>
+                            <td style={{ padding: '10px', textAlign: 'right' }}>{item.grossWeightKg != null ? `${item.grossWeightKg.toLocaleString()} kg` : '—'}</td>
                             <td style={{ padding: '10px' }}>
                               {item.hsCodeSelected ? (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#16a34a', fontWeight: 600, fontFamily: 'monospace' }}>
@@ -508,14 +560,14 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                         <tr style={{ background: '#f0f9ff', fontWeight: 700 }}>
                           <td colSpan={4} style={{ padding: '10px', textAlign: 'right', color: '#374151' }}>TOTAL</td>
                           <td style={{ padding: '10px', textAlign: 'center' }}>
-                            {lineItems.reduce((s, i) => s + i.quantity, 0)}
+                            {totalLineQuantity}
                           </td>
                           <td style={{ padding: '10px' }}></td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>
-                            ${lineItems.reduce((s, i) => s + (i.totalValueUsd ?? 0), 0).toLocaleString()}
+                            ${totalLineValueUsd.toLocaleString()}
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right' }}>
-                            {lineItems.reduce((s, i) => s + (i.grossWeightKg ?? 0), 0).toLocaleString()} kg
+                            {totalLineGrossWeightKg.toLocaleString()} kg
                           </td>
                           <td></td>
                         </tr>
@@ -682,8 +734,8 @@ function ConsistencyTable({
 }) {
   const discMap = new Map(discrepancies.map(d => [d.fieldName, d]))
 
-  const totalQtyInvoice = lineItems.reduce((s, i) => s + i.quantity, 0)
-  const totalValueInvoice = lineItems.reduce((s, i) => s + (i.totalValueUsd ?? 0), 0)
+  const totalQtyInvoice = sumBy(lineItems, (lineItem) => lineItem.quantity)
+  const totalValueInvoice = sumBy(lineItems, (lineItem) => lineItem.totalValueUsd)
   const hasDoc = (type: DocumentType) => documents.some(d => d.documentType === type)
 
   type Row = {
@@ -706,7 +758,7 @@ function ConsistencyTable({
       field: 'package_count',
       label: 'Package / Unit Count',
       bl: declaration.packageCountBl != null ? String(declaration.packageCountBl) : null,
-      invoice: totalQtyInvoice ? String(totalQtyInvoice) : null,
+      invoice: lineItems.length > 0 ? String(totalQtyInvoice) : null,
       pl: declaration.packageCountPl != null ? String(declaration.packageCountPl) : null,
     },
     {
@@ -734,7 +786,7 @@ function ConsistencyTable({
       field: 'total_value',
       label: 'Invoice Total Value',
       bl: null,
-      invoice: totalValueInvoice ? `${declaration.currency} ${totalValueInvoice.toLocaleString()}` : null,
+      invoice: lineItems.length > 0 ? `${declaration.currency} ${totalValueInvoice.toLocaleString()}` : null,
       pl: null,
     },
   ]

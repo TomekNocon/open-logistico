@@ -44,3 +44,8 @@ export const listDeclarationsSchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),
 })
+
+export const exportDeclarationQuerySchema = z.object({
+  target: z.enum(['winsad', 'generic']).default('winsad'),
+  format: z.enum(['json', 'csv']).default('json'),
+})

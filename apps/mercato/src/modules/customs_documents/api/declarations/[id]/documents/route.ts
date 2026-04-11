@@ -42,7 +42,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     declarationId: id,
     documentType: payload.documentType,
     attachmentId: payload.attachmentId,
-    fileName: payload.fileName,
+    fileName: payload.fileName ?? null,
+    createdAt: new Date(),
   })
   em.persist(doc)
 

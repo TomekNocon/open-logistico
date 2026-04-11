@@ -1,4 +1,5 @@
 import type { BLData, InvoiceData, PackingListData } from './parser'
+import { sumBy, toFiniteNumber, toNullableFiniteNumber } from './numbers'
 
 export interface Discrepancy {
   fieldName: string
@@ -34,25 +35,29 @@ export function checkConsistency(
 
   // BL vs Packing List: gross weight (critical)
   if (bl && packingList) {
-    if (bl.grossWeightKg !== packingList.totalGrossWeightKg) {
+    const blGrossWeight = toFiniteNumber(bl.grossWeightKg)
+    const packingListGrossWeight = toFiniteNumber(packingList.totalGrossWeightKg)
+    if (blGrossWeight !== packingListGrossWeight) {
       discrepancies.push({
         fieldName: 'gross_weight_total',
         sourceA: 'bl',
-        valueA: `${bl.grossWeightKg} kg`,
+        valueA: `${blGrossWeight} kg`,
         sourceB: 'packing_list',
-        valueB: `${packingList.totalGrossWeightKg} kg`,
+        valueB: `${packingListGrossWeight} kg`,
         severity: 'error',
       })
     }
 
     // BL vs PL: package count
-    if (bl.packageCount !== packingList.totalQuantity) {
+    const blPackageCount = toFiniteNumber(bl.packageCount)
+    const packingListQuantity = toFiniteNumber(packingList.totalQuantity)
+    if (blPackageCount !== packingListQuantity) {
       discrepancies.push({
         fieldName: 'package_count',
         sourceA: 'bl',
-        valueA: String(bl.packageCount),
+        valueA: String(blPackageCount),
         sourceB: 'packing_list',
-        valueB: String(packingList.totalQuantity),
+        valueB: String(packingListQuantity),
         severity: 'error',
       })
     }
@@ -98,14 +103,15 @@ export function checkConsistency(
     }
 
     // Invoice vs PL: total quantity
-    const invoiceQty = invoice.lineItems.reduce((sum, i) => sum + i.quantity, 0)
-    if (invoiceQty !== packingList.totalQuantity) {
+    const invoiceQuantity = sumBy(invoice.lineItems, (lineItem) => lineItem.quantity)
+    const packingListQuantity = toFiniteNumber(packingList.totalQuantity)
+    if (invoiceQuantity !== packingListQuantity) {
       discrepancies.push({
         fieldName: 'total_quantity',
         sourceA: 'invoice',
-        valueA: String(invoiceQty),
+        valueA: String(invoiceQuantity),
         sourceB: 'packing_list',
-        valueB: String(packingList.totalQuantity),
+        valueB: String(packingListQuantity),
         severity: 'error',
       })
     }
@@ -131,14 +137,17 @@ export function buildConsistencyTable(
   discrepancies: Discrepancy[],
 ): ConsistencyCheckRow[] {
   const discrepancyMap = new Map(discrepancies.map(d => [d.fieldName, d]))
+  const invoiceQuantity = invoice ? sumBy(invoice.lineItems, (lineItem) => lineItem.quantity) : null
+  const invoiceGrossWeight = toNullableFiniteNumber(invoice?.grossWeightKg)
+  const invoiceTotalValue = toNullableFiniteNumber(invoice?.totalValueUsd)
 
   const rows: ConsistencyCheckRow[] = [
     {
       fieldName: 'gross_weight_total',
       fieldLabel: 'Gross Weight (total)',
-      blValue: bl ? `${bl.grossWeightKg.toLocaleString()} kg` : null,
-      invoiceValue: invoice?.grossWeightKg ? `${invoice.grossWeightKg.toLocaleString()} kg` : null,
-      packingListValue: packingList ? `${packingList.totalGrossWeightKg.toLocaleString()} kg` : null,
+      blValue: bl ? `${toFiniteNumber(bl.grossWeightKg).toLocaleString()} kg` : null,
+      invoiceValue: invoiceGrossWeight !== null ? `${invoiceGrossWeight.toLocaleString()} kg` : null,
+      packingListValue: packingList ? `${toFiniteNumber(packingList.totalGrossWeightKg).toLocaleString()} kg` : null,
       status: discrepancyMap.has('gross_weight_total')
         ? (discrepancyMap.get('gross_weight_total')!.severity as 'error' | 'warning')
         : 'ok',
@@ -147,9 +156,9 @@ export function buildConsistencyTable(
     {
       fieldName: 'package_count',
       fieldLabel: 'Package Count',
-      blValue: bl ? String(bl.packageCount) : null,
-      invoiceValue: invoice ? String(invoice.lineItems.reduce((s, i) => s + i.quantity, 0)) : null,
-      packingListValue: packingList ? String(packingList.totalQuantity) : null,
+      blValue: bl ? String(toFiniteNumber(bl.packageCount)) : null,
+      invoiceValue: invoiceQuantity !== null ? String(invoiceQuantity) : null,
+      packingListValue: packingList ? String(toFiniteNumber(packingList.totalQuantity)) : null,
       status: discrepancyMap.has('package_count') ? 'error' : 'ok',
       discrepancy: discrepancyMap.get('package_count'),
     },
@@ -200,7 +209,7 @@ export function buildConsistencyTable(
       fieldName: 'total_value',
       fieldLabel: 'Total Invoice Value',
       blValue: null,
-      invoiceValue: invoice ? `${invoice.currency} ${invoice.totalValueUsd.toLocaleString()}` : null,
+      invoiceValue: invoiceTotalValue !== null && invoice ? `${invoice.currency} ${invoiceTotalValue.toLocaleString()}` : null,
       packingListValue: null,
       status: 'ok',
     },

@@ -12,6 +12,12 @@ import {
 } from '../../../../data/entities'
 import { parseBillOfLading, parseCommercialInvoice, parsePackingList } from '../../../../lib/parser'
 import { checkConsistency } from '../../../../lib/consistency'
+import {
+  normalizeDeclarationNumerics,
+  normalizeLineItemNumerics,
+  toFiniteInteger,
+  toNullableFiniteNumber,
+} from '../../../../lib/numbers'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 
@@ -101,21 +107,21 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     declaration.consigneeName = blData.consignee
     declaration.portOfLoading = blData.portOfLoading
     declaration.portOfDischarge = blData.portOfDischarge
-    declaration.grossWeightBl = blData.grossWeightKg
-    declaration.packageCountBl = blData.packageCount
+    declaration.grossWeightBl = toNullableFiniteNumber(blData.grossWeightKg)
+    declaration.packageCountBl = toFiniteInteger(blData.packageCount, 0)
   }
 
   if (invoiceData) {
     declaration.invoiceNumber = invoiceData.invoiceNumber
-    declaration.totalValueUsd = invoiceData.totalValueUsd
+    declaration.totalValueUsd = toNullableFiniteNumber(invoiceData.totalValueUsd)
     declaration.currency = invoiceData.currency || 'USD'
     if (!blData && invoiceData.seller) declaration.shipperName = invoiceData.seller
     if (!blData && invoiceData.buyer) declaration.consigneeName = invoiceData.buyer
   }
 
   if (packingData) {
-    declaration.grossWeightPl = packingData.totalGrossWeightKg
-    declaration.packageCountPl = packingData.totalQuantity
+    declaration.grossWeightPl = toNullableFiniteNumber(packingData.totalGrossWeightKg)
+    declaration.packageCountPl = toFiniteInteger(packingData.totalQuantity, 0)
   }
 
   // Remove old line items for this declaration
@@ -134,14 +140,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       const lineItem = em.create(CustomsLineItem, {
         declarationId: id,
         description: item.description,
-        quantity: item.quantity,
-        unitPriceUsd: item.unitPriceUsd,
-        totalValueUsd: item.totalValueUsd,
+        quantity: toFiniteInteger(item.quantity, 0),
+        unitPriceUsd: toNullableFiniteNumber(item.unitPriceUsd),
+        totalValueUsd: toNullableFiniteNumber(item.totalValueUsd),
         containerNumber: item.containerNumber,
         vin: item.vin,
         engineNumber: item.engineNumber,
-        grossWeightKg: packingItem?.grossWeightKg ?? null,
-        netWeightKg: packingItem?.netWeightKg ?? null,
+        grossWeightKg: toNullableFiniteNumber(packingItem?.grossWeightKg),
+        netWeightKg: toNullableFiniteNumber(packingItem?.netWeightKg),
+        createdAt: new Date(),
       })
       em.persist(lineItem)
       newLineItems.push(lineItem)
@@ -161,6 +168,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       sourceB: d.sourceB,
       valueB: d.valueB,
       severity: d.severity,
+      isResolved: false,
+      createdAt: new Date(),
     })
     em.persist(disc)
     newDiscrepancies.push(disc)
@@ -174,8 +183,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   return NextResponse.json({
     ok: true,
     data: {
-      declaration,
-      lineItems: newLineItems,
+      declaration: normalizeDeclarationNumerics(declaration),
+      lineItems: newLineItems.map((lineItem) => normalizeLineItemNumerics(lineItem)),
       discrepancies: newDiscrepancies,
     },
   })
