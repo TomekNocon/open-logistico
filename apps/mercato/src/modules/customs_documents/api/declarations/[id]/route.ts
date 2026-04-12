@@ -71,6 +71,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   if (payload.status !== undefined) declaration.status = payload.status
   if (payload.notes !== undefined) declaration.notes = payload.notes
+  if (payload.isNew !== undefined) declaration.isNew = payload.isNew
 
   await em.flush()
   return NextResponse.json({ ok: true, data: normalizeDeclarationNumerics(declaration) })
