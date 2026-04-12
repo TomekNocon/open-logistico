@@ -48,6 +48,7 @@ type Discrepancy = {
 type Declaration = {
   id: string
   status: string
+  isNew: boolean
   blNumber: string | null
   invoiceNumber: string | null
   shipperName: string | null
@@ -171,6 +172,14 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
         setDocuments(res.result.data.documents)
         setLineItems(res.result.data.lineItems.map((lineItem) => normalizeLineItemNumerics(lineItem)))
         setDiscrepancies(res.result.data.discrepancies)
+
+        if (res.result.data.declaration.isNew) {
+          apiCallOrThrow(`/api/customs_documents/declarations/${declarationId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isNew: false }),
+          }).catch(() => {})
+        }
       }
     } catch {
       flash('Failed to load declaration', 'error')

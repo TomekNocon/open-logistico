@@ -12,7 +12,20 @@ export type DocumentDetectionResult = {
   confidence: 'high' | 'medium' | 'low'
 }
 
-export async function detectDocumentType(pdfBytes: Buffer): Promise<DocumentDetectionResult> {
+export function detectDocumentTypeFromFilename(
+  fileName: string,
+): DocumentDetectionResult | null {
+  const lower = fileName.toLowerCase().replace(/\.[^.]+$/, '')
+  if (lower.includes('invoice')) return { documentType: 'invoice', confidence: 'high' }
+  if (lower.includes('pack')) return { documentType: 'packing_list', confidence: 'high' }
+  if (lower.includes('bill') || lower.includes('lading') || lower.includes('awb') || /b[-_/]?l/.test(lower))
+    return { documentType: 'bl', confidence: 'high' }
+  return null
+}
+
+export async function detectDocumentTypeFromContent(
+  pdfBytes: Buffer,
+): Promise<DocumentDetectionResult> {
   const { object } = await generateObject({
     model: getParserModel(),
     schema: detectionSchema,
@@ -39,4 +52,15 @@ Return the document type and your confidence level.`,
     ],
   })
   return object
+}
+
+export async function detectDocumentType(
+  pdfBytes: Buffer,
+  fileName?: string,
+): Promise<DocumentDetectionResult> {
+  if (fileName) {
+    const fromName = detectDocumentTypeFromFilename(fileName)
+    if (fromName) return fromName
+  }
+  return detectDocumentTypeFromContent(pdfBytes)
 }

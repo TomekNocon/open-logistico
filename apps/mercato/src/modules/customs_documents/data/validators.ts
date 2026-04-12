@@ -9,6 +9,14 @@ export const createDeclarationSchema = z.object({
 export const updateDeclarationSchema = z.object({
   status: z.enum(['draft', 'uploaded', 'parsed', 'verified', 'classified']).optional(),
   notes: z.string().max(2000).optional().nullable(),
+  isNew: z.boolean().optional(),
+})
+
+export const batchDeclarationSchema = z.object({
+  files: z.array(z.object({
+    attachmentId: z.string().uuid(),
+    fileName: z.string().max(500).optional(),
+  })).min(2).max(100),
 })
 
 export const attachDocumentSchema = z.object({

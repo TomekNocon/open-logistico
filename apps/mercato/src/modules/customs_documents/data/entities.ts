@@ -3,7 +3,7 @@ import { Entity, PrimaryKey, Property, Index, OptionalProps } from '@mikro-orm/c
 @Entity({ tableName: 'customs_declarations' })
 @Index({ name: 'customs_declarations_tenant_org_idx', properties: ['tenantId', 'organizationId'] })
 export class CustomsDeclaration {
-  [OptionalProps]?: 'status' | 'currency' | 'createdAt' | 'updatedAt' | 'deletedAt'
+  [OptionalProps]?: 'status' | 'currency' | 'isNew' | 'createdAt' | 'updatedAt' | 'deletedAt'
 
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string
@@ -52,6 +52,9 @@ export class CustomsDeclaration {
 
   @Property({ type: 'text', default: 'USD' })
   currency: string = 'USD'
+
+  @Property({ name: 'is_new', type: 'boolean', default: false })
+  isNew: boolean = false
 
   @Property({ type: 'text', nullable: true })
   notes?: string | null
