@@ -65,6 +65,8 @@ type Declaration = {
 type HsProposal = {
   code: string
   description: string
+  breadcrumb?: string
+  reasoning?: string
   dutyAmount: string
   tariffMeasures: Array<{ country: string; description: string; dutyAmount: string }>
   nonTariffMeasures: string[]
@@ -703,8 +705,18 @@ export default function CustomsDeclarationDetailPage({ params }: { params?: { id
                                     <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 700 }}>
                                       {proposal.code}
                                     </td>
-                                    <td style={{ padding: '8px 10px', color: '#374151', maxWidth: '400px' }}>
-                                      {proposal.description}
+                                    <td style={{ padding: '8px 10px', color: '#374151', maxWidth: '460px' }}>
+                                      <div style={{ fontWeight: 600 }}>{proposal.description}</div>
+                                      {proposal.breadcrumb && (
+                                        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+                                          {proposal.breadcrumb}
+                                        </div>
+                                      )}
+                                      {proposal.reasoning && (
+                                        <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', fontStyle: 'italic' }}>
+                                          {proposal.reasoning}
+                                        </div>
+                                      )}
                                     </td>
                                     <td style={{ padding: '8px 10px', fontWeight: 600, color: '#374151' }}>
                                       {proposal.dutyAmount}
