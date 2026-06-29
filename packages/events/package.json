@@ -34,12 +34,12 @@
   "dependencies": {
     "@open-mercato/queue": "workspace:*",
     "@open-mercato/shared": "workspace:*",
-    "pg": "8.20.0"
+    "pg": "8.22.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.6"
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.11"
   },
   "publishConfig": {
     "access": "public"
